@@ -40,6 +40,8 @@ var (
 	volumeF int
 	//Call or put - possible values are call,put,all (default all)
 	optionTypeF string
+	//Call / Put options near value of the strike price
+	nearF float64
 )
 
 func init() {
@@ -48,6 +50,7 @@ func init() {
 	Cmd.Flags().IntVarP(&openInterestF, "openInterest", "o", -1, "set flag to specify showing only results >= (int)")
 	Cmd.Flags().IntVarP(&volumeF, "volume", "v", -1, "set flag to specify showing only results >= (int)")
 	Cmd.Flags().StringVarP(&optionTypeF, "optionType", "t", "all", "set (call|put|fall). default is all")
+	Cmd.Flags().Float64VarP(&nearF, "near", "n", -1, "set flag to specify showing only last price is near (int)")
 }
 
 // execute implements the options command
@@ -145,7 +148,7 @@ func writeE(iter *options.StraddleIter) error {
 func build(ss []*finance.Straddle) (tbl [][]string) {
 	// Get fields.
 	var fs []string
-	if (optionTypeF == "all") {
+	if (optionTypeF == "call" || optionTypeF == "all") {
 		fs = fields()
 		fs = append(fs, utils.Bold("Strike"))
 		fs = append(fs, fields()...)
@@ -160,46 +163,56 @@ func build(ss []*finance.Straddle) (tbl [][]string) {
 	}
 	tbl = append(tbl, fs)
 
-	for _, s := range ss {
-		row := []string{}
-		if (optionTypeF == "call" || optionTypeF == "all") {
-			// Call
-			call := s.Call
-			if call != nil && call.OpenInterest >= openInterestF && call.Volume >= volumeF {
-				row = append(row, utils.ToStringF(call.LastPrice))
-				row = append(row, utils.ToStringF(call.Change))
-				row = append(row, utils.ToStringF(call.PercentChange))
-				row = append(row, utils.ToString(call.Volume))
-				row = append(row, utils.ToString(call.OpenInterest))
-			} else {
-				row = append(row, "--")
-				row = append(row, "--")
-				row = append(row, "--")
-				row = append(row, "--")
-				row = append(row, "--")
-			}
+	nearIndex := -1
+	for idx, s := range ss {
+		if (nearF == s.Strike) {
+			nearIndex = idx;
+			fmt.Println("Near Index", nearIndex, s.Strike)
 		}
-		// Strike.
-		row = append(row, utils.Bold(utils.ToStringF(s.Strike)))
-		if (optionTypeF == "put" || optionTypeF == "all") {
-			// Put.
-			put := s.Put
-			if put != nil && put.OpenInterest >= openInterestF && put.Volume >= volumeF {
-				row = append(row, utils.ToStringF(put.LastPrice))
-				row = append(row, utils.ToStringF(put.Change))
-				row = append(row, utils.ToStringF(put.PercentChange))
-				row = append(row, utils.ToString(put.Volume))
-				row = append(row, utils.ToString(put.OpenInterest))
-			} else {
-				row = append(row, "--")
-				row = append(row, "--")
-				row = append(row, "--")
-				row = append(row, "--")
-				row = append(row, "--")
-			}
-		}
+	}
 
-		tbl = append(tbl, row)
+	for idx, s := range ss {
+		row := []string{}
+		if nearIndex != -1 && (idx + 3 >= nearIndex && idx - 3 <= nearIndex) {
+			if (optionTypeF == "call" || optionTypeF == "all") {
+				// Call
+				call := s.Call
+				if call != nil && call.OpenInterest >= openInterestF && call.Volume >= volumeF {
+					row = append(row, utils.ToStringF(call.LastPrice))
+					row = append(row, utils.ToStringF(call.Change))
+					row = append(row, utils.ToStringF(call.PercentChange))
+					row = append(row, utils.ToString(call.Volume))
+					row = append(row, utils.ToString(call.OpenInterest))
+				} else {
+					row = append(row, "--")
+					row = append(row, "--")
+					row = append(row, "--")
+					row = append(row, "--")
+					row = append(row, "--")
+				}
+			}
+			// Strike.
+			row = append(row, utils.Bold(utils.ToStringF(s.Strike)))
+			if (optionTypeF == "put" || optionTypeF == "all") {
+				// Put.
+				put := s.Put
+				if put != nil && put.OpenInterest >= openInterestF && put.Volume >= volumeF {
+					row = append(row, utils.ToStringF(put.LastPrice))
+					row = append(row, utils.ToStringF(put.Change))
+					row = append(row, utils.ToStringF(put.PercentChange))
+					row = append(row, utils.ToString(put.Volume))
+					row = append(row, utils.ToString(put.OpenInterest))
+				} else {
+					row = append(row, "--")
+					row = append(row, "--")
+					row = append(row, "--")
+					row = append(row, "--")
+					row = append(row, "--")
+				}
+			}
+
+			tbl = append(tbl, row)
+		}
 	}
 
 	return tbl
