@@ -18,8 +18,10 @@ const (
 	Vol         = "Volume"
 	Bid         = "Bid"
 	BidSize     = "Bid Size"
+	BidAndBidSize = "Bid (Size)"
 	Ask         = "Ask"
 	AskSize     = "Ask Size"
+	AskAndAskSize = "Ask (Size)"
 	Open        = "Open"
 	PrevClose   = "Prev Close"
 	Exchange    = "Exchange"
@@ -63,7 +65,7 @@ const (
 // FieldsQuote returns the fields for a plain quote.
 func FieldsQuote() (fields []string) {
 	return []string{Symbol, Market, Time, Last, Change, Vol,
-		Bid, BidSize, Ask, AskSize, Open, PrevClose}
+		BidAndBidSize, AskAndAskSize, Open, PrevClose}
 }
 
 // FieldsInfoQuote returns the fields for an informative quote.
@@ -137,10 +139,14 @@ func MapQuote(field string, q *finance.Quote) string {
 		return utils.ToStringF(q.Bid)
 	case BidSize:
 		return utils.ToString(q.BidSize * 100)
+	case BidAndBidSize:
+		return utils.ToStringF(q.Bid) + " (" + utils.ToString(q.BidSize * 100) + ")"
 	case Ask:
 		return utils.ToStringF(q.Ask)
 	case AskSize:
 		return utils.ToString(q.AskSize * 100)
+	case AskAndAskSize:
+		return utils.ToStringF(q.Ask) + " (" + utils.ToString(q.AskSize * 100) + ")"
 	case Open:
 		return utils.ToStringF(q.RegularMarketOpen)
 	case PrevClose:

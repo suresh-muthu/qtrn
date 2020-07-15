@@ -38,6 +38,8 @@ var (
 	openInterestF int
 	//volume set flag to filter results by greater than or equal to volume for supplied symbol.
 	volumeF int
+	//Call or put - possible values are call,put,all (default all)
+	optionTypeF string
 )
 
 func init() {
@@ -45,6 +47,7 @@ func init() {
 	Cmd.Flags().StringVarP(&expirationF, "exp", "e", "", "set flag to specify expiration date for the supplied symbol. (formatted yyyy-mm-dd)")
 	Cmd.Flags().IntVarP(&openInterestF, "openInterest", "o", -1, "set flag to specify showing only results >= (int)")
 	Cmd.Flags().IntVarP(&volumeF, "volume", "v", -1, "set flag to specify showing only results >= (int)")
+	Cmd.Flags().StringVarP(&optionTypeF, "optionType", "t", "all", "set (call|put|fall). default is all")
 }
 
 // execute implements the options command
@@ -93,7 +96,15 @@ func write(iter *options.StraddleIter) error {
 	table.SetAlignment(tw.ALIGN_LEFT)
 	table.SetCenterSeparator("*")
 	table.SetColumnSeparator("|")
-	table.SetHeader([]string{"", "", "Calls", "", "", utils.DateFS(iter.Meta().ExpirationDate + 86400), "", "", "Puts", "", ""})
+	if (optionTypeF == "call") {
+		table.SetHeader([]string{"", "", "Calls", "", "", utils.DateFS(iter.Meta().ExpirationDate + 86400)})
+	}
+	if (optionTypeF == "put") {
+		table.SetHeader([]string{utils.DateFS(iter.Meta().ExpirationDate + 86400), "", "", "Puts", "", ""})
+	}
+	if (optionTypeF == "all") {
+		table.SetHeader([]string{"", "", "Calls", "", "", utils.DateFS(iter.Meta().ExpirationDate + 86400), "", "", "Puts", "", ""})
+	}
 	table.AppendBulk(build(straddles))
 	table.Render()
 
@@ -133,44 +144,59 @@ func writeE(iter *options.StraddleIter) error {
 // build builds table lines.
 func build(ss []*finance.Straddle) (tbl [][]string) {
 	// Get fields.
-	fs := fields()
-	fs = append(fs, utils.Bold("Strike"))
-	fs = append(fs, fields()...)
+	var fs []string
+	if (optionTypeF == "all") {
+		fs = fields()
+		fs = append(fs, utils.Bold("Strike"))
+		fs = append(fs, fields()...)
+	}
+	if (optionTypeF == "call") {
+		fs = fields()
+		fs = append(fs, utils.Bold("Strike"))
+	}
+	if (optionTypeF == "put") {
+		fs = append(fs, utils.Bold("Strike"))
+		fs = append(fs, fields()...)
+	}
 	tbl = append(tbl, fs)
 
 	for _, s := range ss {
 		row := []string{}
-		// Call
-		call := s.Call
-		if call != nil && call.OpenInterest >= openInterestF && call.Volume >= volumeF {
-			row = append(row, utils.ToStringF(call.LastPrice))
-			row = append(row, utils.ToStringF(call.Change))
-			row = append(row, utils.ToStringF(call.PercentChange))
-			row = append(row, utils.ToString(call.Volume))
-			row = append(row, utils.ToString(call.OpenInterest))
-		} else {
-			row = append(row, "--")
-			row = append(row, "--")
-			row = append(row, "--")
-			row = append(row, "--")
-			row = append(row, "--")
+		if (optionTypeF == "call" || optionTypeF == "all") {
+			// Call
+			call := s.Call
+			if call != nil && call.OpenInterest >= openInterestF && call.Volume >= volumeF {
+				row = append(row, utils.ToStringF(call.LastPrice))
+				row = append(row, utils.ToStringF(call.Change))
+				row = append(row, utils.ToStringF(call.PercentChange))
+				row = append(row, utils.ToString(call.Volume))
+				row = append(row, utils.ToString(call.OpenInterest))
+			} else {
+				row = append(row, "--")
+				row = append(row, "--")
+				row = append(row, "--")
+				row = append(row, "--")
+				row = append(row, "--")
+			}
 		}
 		// Strike.
 		row = append(row, utils.Bold(utils.ToStringF(s.Strike)))
-		// Put.
-		put := s.Put
-		if put != nil && put.OpenInterest >= openInterestF && put.Volume >= volumeF {
-			row = append(row, utils.ToStringF(put.LastPrice))
-			row = append(row, utils.ToStringF(put.Change))
-			row = append(row, utils.ToStringF(put.PercentChange))
-			row = append(row, utils.ToString(put.Volume))
-			row = append(row, utils.ToString(put.OpenInterest))
-		} else {
-			row = append(row, "--")
-			row = append(row, "--")
-			row = append(row, "--")
-			row = append(row, "--")
-			row = append(row, "--")
+		if (optionTypeF == "put" || optionTypeF == "all") {
+			// Put.
+			put := s.Put
+			if put != nil && put.OpenInterest >= openInterestF && put.Volume >= volumeF {
+				row = append(row, utils.ToStringF(put.LastPrice))
+				row = append(row, utils.ToStringF(put.Change))
+				row = append(row, utils.ToStringF(put.PercentChange))
+				row = append(row, utils.ToString(put.Volume))
+				row = append(row, utils.ToString(put.OpenInterest))
+			} else {
+				row = append(row, "--")
+				row = append(row, "--")
+				row = append(row, "--")
+				row = append(row, "--")
+				row = append(row, "--")
+			}
 		}
 
 		tbl = append(tbl, row)
@@ -180,6 +206,5 @@ func build(ss []*finance.Straddle) (tbl [][]string) {
 }
 
 func fields() []string {
-
 	return []string{utils.Bold("Last Price"), utils.Bold("Change"), utils.Bold("% Change"), utils.Bold("Volume"), utils.Bold("Open Int")}
 }

@@ -184,6 +184,7 @@ func format(iter *quote.Iter) (data [][]string, err error) {
 		q := iter.Quote()
 		d := datetime.FromUnix(q.RegularMarketTime)
 		date := fmt.Sprintf("%02d-%02d-%02d", d.Year, d.Month, d.Day)
+		bid := utils.ToStringF(q.Bid) + "  (" + utils.ToString(q.BidSize) + ")"
 		fq := []string{
 			q.Symbol,
 			date,
@@ -191,8 +192,9 @@ func format(iter *quote.Iter) (data [][]string, err error) {
 			utils.ToStringF(q.RegularMarketChange),
 			utils.ToStringF(q.RegularMarketChangePercent),
 			utils.ToString(q.RegularMarketVolume),
-			utils.ToStringF(q.Bid),
-			utils.ToString(q.BidSize),
+			bid,
+			// utils.ToStringF(q.Bid),
+			// utils.ToString(q.BidSize),
 			utils.ToStringF(q.Ask),
 			utils.ToString(q.AskSize),
 			utils.ToStringF(q.RegularMarketOpen),
