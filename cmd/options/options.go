@@ -42,6 +42,8 @@ var (
 	optionTypeF string
 	//Call / Put options near value of the strike price
 	nearF float64
+	//nearRange set flag to filter results by above and below near value.
+	nearRangeF int
 )
 
 func init() {
@@ -51,6 +53,7 @@ func init() {
 	Cmd.Flags().IntVarP(&volumeF, "volume", "v", -1, "set flag to specify showing only results >= (int)")
 	Cmd.Flags().StringVarP(&optionTypeF, "optionType", "t", "all", "set (call|put|fall). default is all")
 	Cmd.Flags().Float64VarP(&nearF, "near", "n", -1, "set flag to specify showing only last price is near (int)")
+	Cmd.Flags().IntVarP(&nearRangeF, "nearRange", "r", 3, "set flag to specify above and below specified near value (int)")
 }
 
 // execute implements the options command
@@ -97,7 +100,7 @@ func write(iter *options.StraddleIter) error {
 	table := tw.NewWriter(os.Stdout)
 	table.SetAutoWrapText(false)
 	table.SetAlignment(tw.ALIGN_LEFT)
-	table.SetCenterSeparator("*")
+	table.SetCenterSeparator("+")
 	table.SetColumnSeparator("|")
 	if (optionTypeF == "call") {
 		table.SetHeader([]string{"", "", "Calls", "", "", utils.DateFS(iter.Meta().ExpirationDate + 86400)})
@@ -164,16 +167,17 @@ func build(ss []*finance.Straddle) (tbl [][]string) {
 	tbl = append(tbl, fs)
 
 	nearIndex := -1
-	for idx, s := range ss {
-		if (nearF == s.Strike) {
-			nearIndex = idx;
-			fmt.Println("Near Index", nearIndex, s.Strike)
+	if (nearF != -1) {
+		for idx, s := range ss {
+			if (nearF == s.Strike) {
+				nearIndex = idx;
+			}
 		}
 	}
 
 	for idx, s := range ss {
 		row := []string{}
-		if nearIndex != -1 && (idx + 3 >= nearIndex && idx - 3 <= nearIndex) {
+		if nearF == -1 || (idx + nearRangeF >= nearIndex && idx - nearRangeF <= nearIndex) {
 			if (optionTypeF == "call" || optionTypeF == "all") {
 				// Call
 				call := s.Call
